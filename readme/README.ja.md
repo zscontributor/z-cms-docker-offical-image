@@ -9,7 +9,7 @@
 Nginx、Apache、Portainer）、そして運用ガイドを提供します。
 
 - **ソースコード:** [github.com/zscontributor/z-cms](https://github.com/zscontributor/z-cms)
-- **イメージ:** Docker Hub の [`zcmsorg`](https://hub.docker.com/u/zcmsorg)
+- **イメージ:** Docker Hub の [`zcms`](https://hub.docker.com/u/zcms)
 - **ドキュメント:** [docs.z-cms.org](https://docs.z-cms.org)
 
 ---
@@ -18,12 +18,12 @@ Nginx、Apache、Portainer）、そして運用ガイドを提供します。
 
 | レイヤー | サービス | イメージ | ポート |
 | --- | --- | --- | --- |
-| 公開サイト | `site-runtime` | `zcmsorg/site-runtime` | 3000 |
-| 管理画面 | `admin-web` | `zcmsorg/admin-web` | 3001 |
-| コア API | `cms-api` | `zcmsorg/cms-api` | 4100 |
-| バックグラウンドジョブ | `worker` | `zcmsorg/worker` | — |
-| プラグインサンドボックス | `plugin-runtime` | `zcmsorg/plugin-runtime` | 4200 |
-| マイグレーション/シード | `migrate` | `zcmsorg/migrate` | —（1 回だけ実行） |
+| 公開サイト | `site-runtime` | `zcms/site-runtime` | 3000 |
+| 管理画面 | `admin-web` | `zcms/admin-web` | 3001 |
+| コア API | `cms-api` | `zcms/cms-api` | 4100 |
+| バックグラウンドジョブ | `worker` | `zcms/worker` | — |
+| プラグインサンドボックス | `plugin-runtime` | `zcms/plugin-runtime` | 4200 |
+| マイグレーション/シード | `migrate` | `zcms/migrate` | —（1 回だけ実行） |
 | データベース | `postgres` | `postgres:17-alpine` | 5432 |
 | キャッシュ / キュー | `redis` | `redis:8-alpine` | 6379 |
 | メディアストレージ | `rustfs` | `rustfs/rustfs` | 9000/9001 |

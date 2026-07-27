@@ -160,7 +160,7 @@ services:
     networks: [default]
 
   migrate:
-    image: zcmsorg/migrate:${ZCMS_VERSION:-latest}
+    image: zcms/migrate:${ZCMS_VERSION:-latest}
     restart: "no"
     environment:
       NODE_ENV: production
@@ -174,7 +174,7 @@ services:
     networks: [default]
 
   cms-api:
-    image: zcmsorg/cms-api:${ZCMS_VERSION:-latest}
+    image: zcms/cms-api:${ZCMS_VERSION:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -216,7 +216,7 @@ services:
     networks: [default, zcms-sandbox]
 
   worker:
-    image: zcmsorg/worker:${ZCMS_VERSION:-latest}
+    image: zcms/worker:${ZCMS_VERSION:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -240,7 +240,7 @@ services:
     networks: [default]
 
   admin-web:
-    image: zcmsorg/admin-web:${ZCMS_VERSION:-latest}
+    image: zcms/admin-web:${ZCMS_VERSION:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -255,7 +255,7 @@ services:
     networks: [default]
 
   site-runtime:
-    image: zcmsorg/site-runtime:${ZCMS_VERSION:-latest}
+    image: zcms/site-runtime:${ZCMS_VERSION:-latest}
     restart: unless-stopped
     user: "node"
     read_only: true
@@ -286,7 +286,7 @@ services:
           pids: 128
 
   plugin-runtime:
-    image: zcmsorg/plugin-runtime:${ZCMS_VERSION:-latest}
+    image: zcms/plugin-runtime:${ZCMS_VERSION:-latest}
     restart: unless-stopped
     user: "node"
     read_only: true

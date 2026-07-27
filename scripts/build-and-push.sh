@@ -6,7 +6,7 @@
 # the Dockerfiles' consumers — compose + docs). Point the script at a checkout,
 # or let it clone one.
 #
-#   NAMESPACE=zcmsorg TAG=0.1.0 SRC=/path/to/z-cms ./scripts/build-and-push.sh
+#   NAMESPACE=zcms TAG=0.1.0 SRC=/path/to/z-cms ./scripts/build-and-push.sh
 #   TAG=latest ./scripts/build-and-push.sh          # clones z-cms into ./z-cms-src
 #
 # Prerequisites:
@@ -17,7 +17,7 @@
 # Set PUSH=false to build only (no login/push) — a local smoke test.
 set -euo pipefail
 
-NAMESPACE="${NAMESPACE:-zcmsorg}"
+NAMESPACE="${NAMESPACE:-zcms}"
 TAG="${TAG:-latest}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
 SRC="${SRC:-./z-cms-src}"

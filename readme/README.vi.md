@@ -9,7 +9,7 @@ con đường nhanh nhất để có một instance đang chạy: image chính t
 Apache, Portainer) và hướng dẫn vận hành.
 
 - **Mã nguồn:** [github.com/zscontributor/z-cms](https://github.com/zscontributor/z-cms)
-- **Image:** [`zcmsorg`](https://hub.docker.com/u/zcmsorg) trên Docker Hub
+- **Image:** [`zcms`](https://hub.docker.com/u/zcms) trên Docker Hub
 - **Tài liệu:** [docs.z-cms.org](https://docs.z-cms.org)
 
 ---
@@ -18,12 +18,12 @@ Apache, Portainer) và hướng dẫn vận hành.
 
 | Lớp | Service | Image | Cổng |
 | --- | --- | --- | --- |
-| Site công khai | `site-runtime` | `zcmsorg/site-runtime` | 3000 |
-| Trang quản trị | `admin-web` | `zcmsorg/admin-web` | 3001 |
-| Core API | `cms-api` | `zcmsorg/cms-api` | 4100 |
-| Job nền | `worker` | `zcmsorg/worker` | — |
-| Sandbox plugin | `plugin-runtime` | `zcmsorg/plugin-runtime` | 4200 |
-| Migrate/seed | `migrate` | `zcmsorg/migrate` | — (chạy 1 lần) |
+| Site công khai | `site-runtime` | `zcms/site-runtime` | 3000 |
+| Trang quản trị | `admin-web` | `zcms/admin-web` | 3001 |
+| Core API | `cms-api` | `zcms/cms-api` | 4100 |
+| Job nền | `worker` | `zcms/worker` | — |
+| Sandbox plugin | `plugin-runtime` | `zcms/plugin-runtime` | 4200 |
+| Migrate/seed | `migrate` | `zcms/migrate` | — (chạy 1 lần) |
 | CSDL | `postgres` | `postgres:17-alpine` | 5432 |
 | Cache / queue | `redis` | `redis:8-alpine` | 6379 |
 | Lưu trữ media | `rustfs` | `rustfs/rustfs` | 9000/9001 |

@@ -1,13 +1,13 @@
 name: Publish images to Docker Hub
 
 # Builds every Z-CMS service image from the SOURCE repo (zscontributor/z-cms) and
-# pushes it multi-arch to Docker Hub under the zcmsorg/* namespace.
+# pushes it multi-arch to Docker Hub under the zcms/* namespace.
 #
 # This repo carries the compose files + docs, not the application source, so the
 # workflow checks the source out at the ref you choose and builds from it.
 #
 # Required repository secrets:
-#   DOCKERHUB_USERNAME   a Docker Hub account with push access to zcmsorg/*
+#   DOCKERHUB_USERNAME   a Docker Hub account with push access to zcms/*
 #   DOCKERHUB_TOKEN      a Docker Hub access token (Account Settings -> Security)
 #
 # Run it from the Actions tab (Run workflow) and pick the source ref + tag.
@@ -29,7 +29,7 @@ on:
         default: true
 
 env:
-  NAMESPACE: zcmsorg
+  NAMESPACE: zcms
   PLATFORMS: linux/amd64,linux/arm64
 
 jobs:

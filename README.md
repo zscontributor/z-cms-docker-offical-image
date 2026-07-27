@@ -9,7 +9,7 @@ repository is the fast path to a running instance: the official images, a full
 Apache, Portainer), and the guide to operate them.
 
 - **Source code:** [github.com/zscontributor/z-cms](https://github.com/zscontributor/z-cms)
-- **Images:** [`zcmsorg`](https://hub.docker.com/u/zcmsorg) on Docker Hub
+- **Images:** [`zcms`](https://hub.docker.com/u/zcms) on Docker Hub
 - **Docs:** [docs.z-cms.org](https://docs.z-cms.org) · **Site:** [z-cms.org](https://z-cms.org)
 
 ---
@@ -44,12 +44,12 @@ away from your credentials.
 
 | Layer | Service | Image | Port |
 | --- | --- | --- | --- |
-| Public site | `site-runtime` | `zcmsorg/site-runtime` | 3000 |
-| Admin UI | `admin-web` | `zcmsorg/admin-web` | 3001 |
-| Core API | `cms-api` | `zcmsorg/cms-api` | 4100 |
-| Background jobs | `worker` | `zcmsorg/worker` | — |
-| Plugin sandbox | `plugin-runtime` | `zcmsorg/plugin-runtime` | 4200 |
-| DB migration/seed | `migrate` | `zcmsorg/migrate` | — (one-shot) |
+| Public site | `site-runtime` | `zcms/site-runtime` | 3000 |
+| Admin UI | `admin-web` | `zcms/admin-web` | 3001 |
+| Core API | `cms-api` | `zcms/cms-api` | 4100 |
+| Background jobs | `worker` | `zcms/worker` | — |
+| Plugin sandbox | `plugin-runtime` | `zcms/plugin-runtime` | 4200 |
+| DB migration/seed | `migrate` | `zcms/migrate` | — (one-shot) |
 | Database | `postgres` | `postgres:17-alpine` | 5432 |
 | Cache / queue | `redis` | `redis:8-alpine` | 6379 |
 | Object storage | `rustfs` | `rustfs/rustfs` | 9000/9001 |
@@ -190,17 +190,17 @@ the environment variables to set and the one-time seed step.
 
 ## The images
 
-All images live under **`zcmsorg`** on Docker Hub and are tagged by release version
+All images live under **`zcms`** on Docker Hub and are tagged by release version
 (`0.1.0`, `0.1`) plus `latest`. Pin an exact version in production (`ZCMS_VERSION`
 in `.env`); `latest` tracks the newest release.
 
 ```
-zcmsorg/cms-api          the NestJS core API (holds the DB/S3 credentials)
-zcmsorg/site-runtime     the public Next.js site (runs theme code — hardened)
-zcmsorg/admin-web        the Next.js admin UI (no credentials)
-zcmsorg/worker           BullMQ background jobs
-zcmsorg/plugin-runtime   the untrusted-plugin sandbox (credential-free)
-zcmsorg/migrate          one-shot: migrations + register signed built-ins
+zcms/cms-api          the NestJS core API (holds the DB/S3 credentials)
+zcms/site-runtime     the public Next.js site (runs theme code — hardened)
+zcms/admin-web        the Next.js admin UI (no credentials)
+zcms/worker           BullMQ background jobs
+zcms/plugin-runtime   the untrusted-plugin sandbox (credential-free)
+zcms/migrate          one-shot: migrations + register signed built-ins
 ```
 
 `postgres`, `redis`, `rustfs`, `mailpit` are stock upstream images.
@@ -281,8 +281,8 @@ maintainers and for anyone running a fork.
 
 - **CI:** [`.github/workflows/publish.yml`](.github/workflows/publish.yml) checks out
   the source repo at a chosen ref and pushes all six images multi-arch to
-  `zcmsorg/*`. It needs the `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` secrets.
-- **Local:** `NAMESPACE=zcmsorg TAG=0.1.0 SRC=/path/to/z-cms
+  `zcms/*`. It needs the `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` secrets.
+- **Local:** `NAMESPACE=zcms TAG=0.1.0 SRC=/path/to/z-cms
   ./scripts/build-and-push.sh` (requires `docker login` and QEMU for the arm64 leg).
 
 A fork that changes built-in themes/plugins must sign them with its **own** key and

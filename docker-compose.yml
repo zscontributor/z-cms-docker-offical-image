@@ -137,7 +137,7 @@ services:
   # it to finish. Idempotent; runs again on every `up`.
   # --------------------------------------------------------------------------
   migrate:
-    image: zcmsorg/migrate:${ZCMS_VERSION:-latest}
+    image: zcms/migrate:${ZCMS_VERSION:-latest}
     container_name: zcms-migrate
     restart: "no"
     env_file: .env
@@ -154,7 +154,7 @@ services:
   # single door the sandboxed plugin-runtime is allowed to reach.
   # --------------------------------------------------------------------------
   cms-api:
-    image: zcmsorg/cms-api:${ZCMS_VERSION:-latest}
+    image: zcms/cms-api:${ZCMS_VERSION:-latest}
     container_name: zcms-cms-api
     restart: unless-stopped
     env_file: .env
@@ -193,7 +193,7 @@ services:
   # port; dials Redis. First-party infra, so it holds DB + S3 credentials.
   # --------------------------------------------------------------------------
   worker:
-    image: zcmsorg/worker:${ZCMS_VERSION:-latest}
+    image: zcms/worker:${ZCMS_VERSION:-latest}
     container_name: zcms-worker
     restart: unless-stopped
     env_file: .env
@@ -216,7 +216,7 @@ services:
   # server-side over the compose network. Served under ADMIN_BASE_PATH (/admin).
   # --------------------------------------------------------------------------
   admin-web:
-    image: zcmsorg/admin-web:${ZCMS_VERSION:-latest}
+    image: zcms/admin-web:${ZCMS_VERSION:-latest}
     container_name: zcms-admin-web
     restart: unless-stopped
     environment:
@@ -239,7 +239,7 @@ services:
   # full .env: only the handful of values below, none of them a real credential.
   # --------------------------------------------------------------------------
   site-runtime:
-    image: zcmsorg/site-runtime:${ZCMS_VERSION:-latest}
+    image: zcms/site-runtime:${ZCMS_VERSION:-latest}
     container_name: zcms-site-runtime
     restart: unless-stopped
     user: "node"
@@ -282,7 +282,7 @@ services:
   # boundary, this network is the last.
   # --------------------------------------------------------------------------
   plugin-runtime:
-    image: zcmsorg/plugin-runtime:${ZCMS_VERSION:-latest}
+    image: zcms/plugin-runtime:${ZCMS_VERSION:-latest}
     container_name: zcms-plugin-runtime
     restart: unless-stopped
     user: "node"
