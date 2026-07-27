@@ -1,0 +1,40 @@
+# =============================================================================
+# Caddy overlay — the simplest path to automatic HTTPS.
+#
+#   docker compose -f docker-compose.yml -f compose/caddy.yml up -d
+#
+# Set in .env (same as the Traefik example):
+#   DOMAIN=your-domain.com   PUBLIC_SCHEME=https   ACME_EMAIL=you@your-domain.com
+#   CMS_API_URL / ADMIN_WEB_URL / SITE_RUNTIME_URL = https://your-domain.com
+#   S3_PUBLIC_URL=https://your-domain.com/zcms-media
+#
+# DNS -> this host, ports 80 + 443 open. Caddy fetches and renews TLS itself.
+# Routing lives in compose/caddy/Caddyfile.
+# =============================================================================
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: zcms-caddy
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./compose/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - site-runtime
+      - admin-web
+      - cms-api
+    networks:
+      - default
+
+volumes:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,93 @@
+# =============================================================================
+# Traefik overlay — automatic HTTPS (Let's Encrypt), Docker-native routing.
+#
+#   docker compose -f docker-compose.yml -f compose/traefik.yml up -d
+#
+# Set in .env before running:
+#   DOMAIN=your-domain.com
+#   PUBLIC_SCHEME=https
+#   ACME_EMAIL=you@your-domain.com
+#   CMS_API_URL=https://your-domain.com
+#   ADMIN_WEB_URL=https://your-domain.com
+#   SITE_RUNTIME_URL=https://your-domain.com
+#   S3_PUBLIC_URL=https://your-domain.com/zcms-media
+#
+# DNS: point your-domain.com (an A/AAAA record) at this host, ports 80 + 443 open.
+# Traefik obtains and renews the certificate over the TLS-ALPN-01 challenge.
+#
+# Routing per host:  /api -> cms-api  ·  /admin -> admin-web  ·
+#                    /zcms-media -> storage  ·  everything else -> site-runtime
+# =============================================================================
+
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: zcms-traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Redirect all plain HTTP to HTTPS.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.storage=/acme/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-acme:/acme
+    depends_on:
+      - site-runtime
+      - admin-web
+      - cms-api
+    networks:
+      - default
+
+  # Everything below re-declares a base service ONLY to attach Traefik labels;
+  # Compose merges these onto the full definitions in docker-compose.yml.
+
+  site-runtime:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.zcms-site.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.zcms-site.entrypoints=websecure
+      - traefik.http.routers.zcms-site.tls.certresolver=le
+      - traefik.http.routers.zcms-site.priority=1
+      - traefik.http.services.zcms-site.loadbalancer.server.port=3000
+
+  admin-web:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.zcms-admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)
+      - traefik.http.routers.zcms-admin.entrypoints=websecure
+      - traefik.http.routers.zcms-admin.tls.certresolver=le
+      - traefik.http.routers.zcms-admin.priority=20
+      - traefik.http.services.zcms-admin.loadbalancer.server.port=3001
+
+  cms-api:
+    labels:
+      - traefik.enable=true
+      # cms-api is on two networks; tell Traefik to reach it over the default one.
+      - traefik.docker.network=z-cms_default
+      - traefik.http.routers.zcms-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+      - traefik.http.routers.zcms-api.entrypoints=websecure
+      - traefik.http.routers.zcms-api.tls.certresolver=le
+      - traefik.http.routers.zcms-api.priority=30
+      - traefik.http.services.zcms-api.loadbalancer.server.port=4100
+
+  rustfs:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.zcms-media.rule=Host(`${DOMAIN}`) && PathPrefix(`/zcms-media`)
+      - traefik.http.routers.zcms-media.entrypoints=websecure
+      - traefik.http.routers.zcms-media.tls.certresolver=le
+      - traefik.http.routers.zcms-media.priority=20
+      - traefik.http.services.zcms-media.loadbalancer.server.port=9000
+
+volumes:
+  traefik-acme:

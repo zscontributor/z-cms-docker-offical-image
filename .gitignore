@@ -1,0 +1,21 @@
+# Your real configuration — NEVER commit this. It holds every secret.
+.env
+.env.*
+!.env.example
+
+# Local reverse-proxy state (ACME certs, issued certificates, keys)
+compose/traefik/acme.json
+compose/**/certs/
+*.pem
+*.key
+*.crt
+
+# A local checkout of the source repo, if the build script cloned one here
+/z-cms-src/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

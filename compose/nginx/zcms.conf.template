@@ -1,0 +1,84 @@
+# Z-CMS — Nginx reverse proxy.
+# ${DOMAIN} is substituted at container start by the nginx image (envsubst).
+# nginx's own runtime variables ($host, $remote_addr, …) are left untouched.
+
+# Uploads (media, package sideloads) can be large — raise the body limit.
+client_max_body_size 64m;
+
+# Shared proxy headers for every upstream.
+proxy_http_version 1.1;
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host  $host;
+proxy_set_header Upgrade           $http_upgrade;
+proxy_set_header Connection        "upgrade";
+
+# ---------------------------------------------------------------------------
+# HTTP :80 — works immediately. If you terminate TLS here (see the HTTPS block
+# below), replace the routing here with a redirect to https.
+# ---------------------------------------------------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    # Core API (routes are /api/v1).
+    location /api/ {
+        proxy_pass http://cms-api:4100;
+    }
+
+    # Admin UI, mounted under /admin (ADMIN_BASE_PATH).
+    location /admin {
+        proxy_pass http://admin-web:3001;
+    }
+
+    # Public media. Path preserved (path-style S3: /zcms-media/<key>).
+    location /zcms-media/ {
+        proxy_pass http://rustfs:9000;
+    }
+
+    # Everything else is the public site.
+    location / {
+        proxy_pass http://site-runtime:3000;
+    }
+}
+
+# ---------------------------------------------------------------------------
+# HTTPS :443 — uncomment to terminate TLS here.
+#
+#  1. Obtain a certificate for ${DOMAIN}. Easiest: run certbot once in standalone
+#     mode on the host (with :80 free), or copy fullchain.pem + privkey.pem from
+#     an existing certificate into ./compose/nginx/certs/.
+#  2. Mount ./compose/nginx/certs -> /etc/nginx/certs (see compose/nginx.yml).
+#  3. Publish 443 in compose/nginx.yml.
+#  4. Uncomment the two server blocks below and set PUBLIC_SCHEME=https plus the
+#     https:// public URLs in .env, then re-up.
+# ---------------------------------------------------------------------------
+#
+# server {
+#     listen 80;
+#     listen [::]:80;
+#     server_name ${DOMAIN};
+#     # Allow ACME HTTP-01 renewals through, redirect everything else to HTTPS.
+#     location /.well-known/acme-challenge/ { root /var/www/certbot; }
+#     location / { return 301 https://$host$request_uri; }
+# }
+#
+# server {
+#     listen 443 ssl;
+#     listen [::]:443 ssl;
+#     http2 on;
+#     server_name ${DOMAIN};
+#
+#     ssl_certificate     /etc/nginx/certs/fullchain.pem;
+#     ssl_certificate_key /etc/nginx/certs/privkey.pem;
+#     ssl_protocols       TLSv1.2 TLSv1.3;
+#     ssl_ciphers         HIGH:!aNULL:!MD5;
+#
+#     location /api/        { proxy_pass http://cms-api:4100; }
+#     location /admin       { proxy_pass http://admin-web:3001; }
+#     location /zcms-media/ { proxy_pass http://rustfs:9000; }
+#     location /            { proxy_pass http://site-runtime:3000; }
+# }

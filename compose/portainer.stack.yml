@@ -1,0 +1,324 @@
+# =============================================================================
+# Z-CMS — self-contained Portainer stack (single file, no host bind-mounts).
+#
+# HOW TO DEPLOY IN PORTAINER
+#   Stacks -> Add stack -> Web editor -> paste this file.
+#   In "Environment variables", add the values below (use "Advanced mode" to
+#   paste them all at once). Generate the secrets first with any of:
+#       openssl rand -base64 32          # for keys / tokens
+#   Then Deploy the stack. Caddy obtains TLS for ${DOMAIN} automatically
+#   (DNS -> this host, ports 80 + 443 reachable from the internet).
+#
+# REQUIRED ENVIRONMENT VARIABLES (set in Portainer)
+#   DOMAIN                        your-domain.com
+#   ACME_EMAIL                    you@your-domain.com
+#   POSTGRES_PASSWORD            (openssl rand -base64 24)
+#   REDIS_PASSWORD              (openssl rand -base64 24)
+#   S3_ACCESS_KEY               (openssl rand -hex 12)
+#   S3_SECRET_KEY               (openssl rand -base64 24)
+#   JWT_SECRET                  (openssl rand -base64 32)
+#   CMS_INTERNAL_TOKEN          (openssl rand -base64 32)
+#   SITE_RUNTIME_INTERNAL_TOKEN (openssl rand -base64 32)   distinct from above
+#   TOTP_ENCRYPTION_KEY         (openssl rand -base64 32)
+#   MAIL_ENCRYPTION_KEY         (openssl rand -base64 32)
+#   SEED_ADMIN_EMAIL             admin@your-domain.com
+#   SEED_ADMIN_PASSWORD         (a strong password)
+#   ZCMS_VERSION                 latest   (or a pinned release tag)
+#
+# AFTER FIRST DEPLOY — create the admin user + demo site (run once):
+#   In Portainer, open a console on the "migrate" container (or via docker exec)
+#   and run:   pnpm --filter @zcmsorg/database seed
+#   Then log in at https://your-domain.com/admin and, under Sites, set the
+#   primary domain to your-domain.com (the seed ships a localhost demo domain).
+# =============================================================================
+
+configs:
+  zcms_pg_init:
+    content: |
+      CREATE ROLE zcms_app WITH LOGIN PASSWORD 'zcms_app' NOBYPASSRLS;
+      GRANT CONNECT ON DATABASE zcms TO zcms_app;
+      GRANT USAGE ON SCHEMA public TO zcms_app;
+      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO zcms_app;
+      GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO zcms_app;
+      ALTER DEFAULT PRIVILEGES FOR ROLE zcms IN SCHEMA public
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO zcms_app;
+      ALTER DEFAULT PRIVILEGES FOR ROLE zcms IN SCHEMA public
+        GRANT USAGE, SELECT ON SEQUENCES TO zcms_app;
+      REVOKE CREATE ON SCHEMA public FROM zcms_app;
+  zcms_caddyfile:
+    # $$ escapes the dollar so Compose passes a literal `$` through — the final
+    # config reads {$DOMAIN}/{$ACME_EMAIL}, which is Caddy's own env-var syntax,
+    # resolved by Caddy at runtime from the container environment below.
+    content: |
+      {
+        email {$$ACME_EMAIL}
+      }
+      {$$DOMAIN} {
+        encode zstd gzip
+        @api path /api /api/*
+        handle @api { reverse_proxy cms-api:4100 }
+        @admin path /admin /admin/*
+        handle @admin { reverse_proxy admin-web:3001 }
+        @media path /zcms-media/*
+        handle @media { reverse_proxy rustfs:9000 }
+        handle { reverse_proxy site-runtime:3000 }
+      }
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    configs:
+      - source: zcms_caddyfile
+        target: /etc/caddy/Caddyfile
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [default]
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zcms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-zcms}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    configs:
+      - source: zcms_pg_init
+        target: /docker-entrypoint-initdb.d/01-app-role.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zcms} -d ${POSTGRES_DB:-zcms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [default]
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [default]
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-beta.8
+    restart: unless-stopped
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+      RUSTFS_OBS_LOGGER_LEVEL: warn
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [default]
+
+  storage-init:
+    image: amazon/aws-cli:latest
+    restart: "no"
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+      BUCKET: ${S3_BUCKET:-zcms-media}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        endpoint="--endpoint-url http://rustfs:9000"
+        until aws $$endpoint s3 ls >/dev/null 2>&1; do sleep 2; done
+        aws $$endpoint s3api create-bucket --bucket "$$BUCKET" || true
+        aws $$endpoint s3api put-bucket-policy --bucket "$$BUCKET" --policy "{
+          \"Version\": \"2012-10-17\",
+          \"Statement\": [{\"Sid\":\"PublicRead\",\"Effect\":\"Allow\",
+          \"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],
+          \"Resource\":[\"arn:aws:s3:::$$BUCKET/*\"]}]}"
+        echo "storage ready"
+    networks: [default]
+
+  migrate:
+    image: zcmsorg/migrate:${ZCMS_VERSION:-latest}
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zcms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      FIRST_PARTY_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKlZg1nED9EybjxuY9Oah8ppD/3n09jOngODUVzeXFJw=\n-----END PUBLIC KEY-----'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [default]
+
+  cms-api:
+    image: zcmsorg/cms-api:${ZCMS_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      CMS_API_PORT: "4100"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zcms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      APP_DATABASE_URL: postgresql://${APP_DB_USER:-zcms_app}:${APP_DB_PASSWORD:-zcms_app}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      S3_ENDPOINT: http://rustfs:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-zcms-media}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_PUBLIC_URL: https://${DOMAIN}/zcms-media
+      PLUGIN_RUNTIME_URL: http://plugin-runtime:4200
+      ADMIN_WEB_URL: https://${DOMAIN}
+      SITE_RUNTIME_URL: https://${DOMAIN}
+      JWT_SECRET: ${JWT_SECRET}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY}
+      MAIL_ENCRYPTION_KEY: ${MAIL_ENCRYPTION_KEY}
+      CMS_INTERNAL_TOKEN: ${CMS_INTERNAL_TOKEN}
+      SITE_RUNTIME_INTERNAL_TOKEN: ${SITE_RUNTIME_INTERNAL_TOKEN}
+      MFA_ISSUER: ${MFA_ISSUER:-Z-CMS}
+      TRUST_PROXY: "1"
+      SWAGGER_ENABLED: "true"
+      FIRST_PARTY_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKlZg1nED9EybjxuY9Oah8ppD/3n09jOngODUVzeXFJw=\n-----END PUBLIC KEY-----'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4100/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [default, zcms-sandbox]
+
+  worker:
+    image: zcmsorg/worker:${ZCMS_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zcms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      APP_DATABASE_URL: postgresql://${APP_DB_USER:-zcms_app}:${APP_DB_PASSWORD:-zcms_app}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      S3_ENDPOINT: http://rustfs:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-zcms-media}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      CMS_INTERNAL_TOKEN: ${CMS_INTERNAL_TOKEN}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [default]
+
+  admin-web:
+    image: zcmsorg/admin-web:${ZCMS_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      CMS_API_URL: http://cms-api:4100
+      SITE_RUNTIME_URL: https://${DOMAIN}
+      ADMIN_BASE_PATH: /admin
+      S3_PUBLIC_URL: https://${DOMAIN}/zcms-media
+    depends_on:
+      cms-api:
+        condition: service_healthy
+    networks: [default]
+
+  site-runtime:
+    image: zcmsorg/site-runtime:${ZCMS_VERSION:-latest}
+    restart: unless-stopped
+    user: "node"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    tmpfs:
+      - /tmp:size=256m
+      - /app/apps/site-runtime/.next/cache:size=128m
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=640
+      PORT: "3000"
+      CMS_API_URL: http://cms-api:4100
+      THEME_CACHE_DIR: /tmp/zcms-themes
+      S3_PUBLIC_URL: https://${DOMAIN}/zcms-media
+      CMS_INTERNAL_TOKEN: ${SITE_RUNTIME_INTERNAL_TOKEN}
+      FIRST_PARTY_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKlZg1nED9EybjxuY9Oah8ppD/3n09jOngODUVzeXFJw=\n-----END PUBLIC KEY-----'
+    depends_on:
+      cms-api:
+        condition: service_healthy
+    networks: [default]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+          pids: 128
+
+  plugin-runtime:
+    image: zcmsorg/plugin-runtime:${ZCMS_VERSION:-latest}
+    restart: unless-stopped
+    user: "node"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    environment:
+      NODE_ENV: production
+      PLUGIN_RUNTIME_PORT: "4200"
+      PLUGIN_DIR: /plugins
+      CMS_API_URL: http://cms-api:4100
+      CMS_INTERNAL_TOKEN: ${CMS_INTERNAL_TOKEN}
+      FIRST_PARTY_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKlZg1nED9EybjxuY9Oah8ppD/3n09jOngODUVzeXFJw=\n-----END PUBLIC KEY-----'
+    networks: [zcms-sandbox]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+          pids: 128
+
+networks:
+  default:
+    driver: bridge
+  zcms-sandbox:
+    internal: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  rustfs-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,36 @@
+# =============================================================================
+# Nginx overlay — reverse proxy in front of Z-CMS.
+#
+#   docker compose -f docker-compose.yml -f compose/nginx.yml up -d
+#
+# Works out of the box on HTTP :80 (good for local testing, or when TLS is
+# terminated upstream — a load balancer, Cloudflare, or a front nginx). To add
+# HTTPS directly here, see compose/nginx/zcms.conf.template and the README.
+#
+# Set in .env: DOMAIN, and the public URLs to match how browsers reach you, e.g.
+#   S3_PUBLIC_URL=https://your-domain.com/zcms-media   (or http:// for plain :80)
+#
+# ${DOMAIN} in the template is filled in by the nginx image's envsubst step.
+# =============================================================================
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: zcms-nginx
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      # Uncomment once you have certificates mounted (see the template + README):
+      # - "443:443"
+    volumes:
+      - ./compose/nginx/zcms.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # Mount your certificates here to enable the HTTPS server block:
+      # - ./compose/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - site-runtime
+      - admin-web
+      - cms-api
+    networks:
+      - default

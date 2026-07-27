@@ -1,0 +1,98 @@
+name: Publish images to Docker Hub
+
+# Builds every Z-CMS service image from the SOURCE repo (zscontributor/z-cms) and
+# pushes it multi-arch to Docker Hub under the zcmsorg/* namespace.
+#
+# This repo carries the compose files + docs, not the application source, so the
+# workflow checks the source out at the ref you choose and builds from it.
+#
+# Required repository secrets:
+#   DOCKERHUB_USERNAME   a Docker Hub account with push access to zcmsorg/*
+#   DOCKERHUB_TOKEN      a Docker Hub access token (Account Settings -> Security)
+#
+# Run it from the Actions tab (Run workflow) and pick the source ref + tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "z-cms git ref to build (branch, tag or SHA)"
+        required: true
+        default: "main"
+      image_tag:
+        description: "Docker Hub tag to publish (e.g. 0.1.0 or latest)"
+        required: true
+        default: "latest"
+      also_latest:
+        description: "Also tag as :latest"
+        type: boolean
+        default: true
+
+env:
+  NAMESPACE: zcmsorg
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  publish:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: cms-api
+            target: cms-api
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: worker
+            target: worker
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: admin-web
+            target: admin-web
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: site-runtime
+            target: site-runtime
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: migrate
+            target: migrate
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: plugin-runtime
+            target: ""
+            dockerfile: infrastructure/docker/plugin-runtime.Dockerfile
+
+    steps:
+      - name: Check out the Z-CMS source
+        uses: actions/checkout@v5
+        with:
+          repository: zscontributor/z-cms
+          ref: ${{ github.event.inputs.source_ref }}
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: docker.io/${{ env.NAMESPACE }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=${{ github.event.inputs.image_tag }}
+            type=raw,value=latest,enable=${{ github.event.inputs.also_latest }}
+
+      - name: Build and push (${{ env.PLATFORMS }})
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

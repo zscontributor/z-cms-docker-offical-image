@@ -1,0 +1,31 @@
+# =============================================================================
+# Apache (httpd) overlay — reverse proxy in front of Z-CMS with mod_proxy.
+#
+#   docker compose -f docker-compose.yml -f compose/apache.yml up -d
+#
+# Works on HTTP :80 out of the box. ${DOMAIN} is read from the environment by
+# Apache at startup. For HTTPS, terminate TLS upstream, or enable the commented
+# SSL virtual host in compose/apache/httpd.conf (see the README).
+#
+# Set in .env: DOMAIN, and public URLs matching how browsers reach you.
+# =============================================================================
+
+services:
+  apache:
+    image: httpd:2.4
+    container_name: zcms-apache
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      # - "443:443"   # enable with the SSL vhost + mounted certs
+    volumes:
+      - ./compose/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+      # - ./compose/apache/certs:/usr/local/apache2/conf/certs:ro
+    depends_on:
+      - site-runtime
+      - admin-web
+      - cms-api
+    networks:
+      - default
