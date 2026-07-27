@@ -62,6 +62,14 @@ Mở thử:
 - API docs → <http://localhost:4100/api/v1/docs>
 - Email thử (Mailpit) → <http://localhost:8025>
 
+> **Cổng `3000` / `3001`, không phải `3100` / `3101`.** Các image này chạy Z-CMS ở
+> chế độ production (`next start`) nên bind cổng chuẩn `3000` (site) và `3001`
+> (admin). Bản [source](https://github.com/zscontributor/z-cms) chạy dev
+> (`next dev`) thì được **cố ý** remap sang `3100` / `3101` để tránh đụng các cổng
+> thường đã bị chiếm trên máy dev. API (`4100`) thì giống nhau ở cả hai. Nhờ vậy
+> bạn có thể chạy **đồng thời** stack dev từ source (`3100` / `3101`) **và** stack
+> Docker này (`3000` / `3001`) trên cùng một máy mà không xung đột cổng.
+
 Dừng: `docker compose down` (thêm `-v` để xoá luôn dữ liệu).
 
 ## Chạy production với tên miền + HTTPS

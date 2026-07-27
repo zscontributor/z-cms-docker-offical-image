@@ -102,6 +102,15 @@ Then open:
 > The app ports are published on `127.0.0.1` only. For anything public, put it
 > behind one of the reverse proxies below.
 
+> **Ports `3000` / `3001`, not `3100` / `3101`.** These images run Z-CMS in
+> production mode (`next start`), which binds the standard `3000` (site) and
+> `3001` (admin). The [source](https://github.com/zscontributor/z-cms) dev
+> servers (`next dev`) are deliberately remapped to `3100` / `3101` so they don't
+> clash with ports commonly already taken on a developer's machine. The API
+> (`4100`) is the same in both. The upshot: you can run the source dev stack
+> (`3100` / `3101`) **and** this Docker stack (`3000` / `3001`) on the same
+> machine at once without a port conflict.
+
 Stop it with `docker compose down` (add `-v` to also wipe the data volumes).
 
 ---
