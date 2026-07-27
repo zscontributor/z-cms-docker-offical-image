@@ -1,0 +1,49 @@
+name: Sync Docker Hub overviews
+
+# Pushes the per-image overview pages (dockerhub/<service>.md) to the Docker Hub
+# "Overview" tab, so each zcms/<service> repository has a proper landing page.
+# Runs when an overview changes on main, or on demand.
+#
+# Uses the same DOCKERHUB_USERNAME / DOCKERHUB_TOKEN secrets as publishing.
+# Note: the token must be a Docker Hub access token (or password) with write
+# scope. If a run fails with 401 on the description update, regenerate the token
+# with read/write/delete permissions.
+
+on:
+  push:
+    branches: [main]
+    paths: ["dockerhub/**", ".github/workflows/dockerhub-readme.yml"]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: cms-api
+            short: "Z-CMS core API (NestJS) — auth, content, media, plugins, marketplace."
+          - service: site-runtime
+            short: "Z-CMS public site runtime (Next.js) — renders themes in a hardened sandbox."
+          - service: admin-web
+            short: "Z-CMS admin UI (Next.js) — content, media, appearance, users, settings."
+          - service: worker
+            short: "Z-CMS background worker (BullMQ) — mail, image variants, sitemaps, jobs."
+          - service: plugin-runtime
+            short: "Z-CMS plugin sandbox — runs untrusted plugins in V8 isolates, credential-free."
+          - service: migrate
+            short: "Z-CMS database migration & signed built-in registration job."
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Update ${{ matrix.service }} overview
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: zcms/${{ matrix.service }}
+          readme-filepath: ./dockerhub/${{ matrix.service }}.md
+          short-description: ${{ matrix.short }}
