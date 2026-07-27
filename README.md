@@ -248,9 +248,13 @@ Going live: [docs/production-checklist.md](docs/production-checklist.md).
 
 ## Troubleshooting
 
-**The public site shows nothing / a fallback on my domain.**
-The demo seed binds the first site to a `localhost` hostname. Log in at
-`/admin`, open **Sites**, and set the primary domain to your real hostname.
+**The public site shows nothing / a fallback.**
+`first-run-seed.sh` binds the demo site to the host from your `.env` — `DOMAIN`
+for a real deployment, or `localhost:<SITE_RUNTIME_PORT>` for the quickstart. If
+you change `DOMAIN` afterwards, or front it with a different hostname, update the
+primary domain under **Sites** in the admin: the public site resolves by the
+exact `Host` header. (If you seed by hand — e.g. the Portainer console — set the
+domain in the admin, since only the script auto-binds it.)
 
 **A service keeps restarting on boot.** Check `docker compose logs <service>`.
 Most first-boot failures are a missing/weak env value — the stack refuses to start

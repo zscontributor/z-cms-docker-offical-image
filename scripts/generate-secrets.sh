@@ -42,11 +42,19 @@ EOF
 }
 
 if [[ "${1:-}" == "--write" ]]; then
+  # Three cases:
+  #   - no .env yet            -> create it from .env.example, then fill.
+  #   - .env still has change-me placeholders (e.g. just `cp`-ed) -> fill in place.
+  #   - .env has real secrets  -> refuse, so we never clobber a live config.
   if [[ -f .env ]]; then
-    echo "Refusing to overwrite an existing .env. Remove it first, or run without --write and paste manually." >&2
-    exit 1
+    if ! grep -q 'change-me' .env; then
+      echo "Refusing to overwrite .env: it has no change-me placeholders left (looks like a real config). Remove it first, or run without --write and paste manually." >&2
+      exit 1
+    fi
+    echo "Filling placeholder secrets in the existing .env…"
+  else
+    cp .env.example .env
   fi
-  cp .env.example .env
   # Replace each placeholder value in place (portable sed for macOS + Linux).
   while IFS='=' read -r key val; do
     [[ -z "$key" ]] && continue
