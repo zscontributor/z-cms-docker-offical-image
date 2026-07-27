@@ -1,6 +1,6 @@
 # Z-CMS — official Docker images
 
-**English** | [Tiếng Việt](readme/README.vi.md)
+**English** | [Tiếng Việt](readme/README.vi.md) | [日本語](readme/README.ja.md)
 
 Run [Z-CMS](https://github.com/zscontributor/z-cms) — a multi-tenant CMS with a
 theme engine and a signed plugin marketplace — from prebuilt Docker images. This

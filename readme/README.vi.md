@@ -1,6 +1,6 @@
 # Z-CMS — Docker image chính thức
 
-[English](../README.md) | **Tiếng Việt**
+[English](../README.md) | **Tiếng Việt** | [日本語](README.ja.md)
 
 Chạy [Z-CMS](https://github.com/zscontributor/z-cms) — CMS đa tenant với engine
 theme và marketplace plugin có ký số — từ các Docker image dựng sẵn. Repo này là
