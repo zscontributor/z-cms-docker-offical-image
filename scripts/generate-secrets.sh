@@ -14,9 +14,13 @@ cd "$(dirname "$0")/.."
 
 rand_b64() { openssl rand -base64 "${1:-32}" | tr -d '\n'; }
 rand_hex() { openssl rand -hex "${1:-16}" | tr -d '\n'; }
+# URL-safe (base64url: no + / =). Used for values interpolated into
+# postgresql:// and redis:// connection strings — a raw `/` in a password there
+# breaks URL parsing ("invalid port number").
+rand_urlsafe() { openssl rand -base64 "${1:-24}" | tr -d '\n' | tr '+/' '-_' | tr -d '='; }
 
-POSTGRES_PASSWORD="$(rand_b64 24)"
-REDIS_PASSWORD="$(rand_b64 24)"
+POSTGRES_PASSWORD="$(rand_urlsafe 24)"
+REDIS_PASSWORD="$(rand_urlsafe 24)"
 S3_ACCESS_KEY="zcms$(rand_hex 8)"
 S3_SECRET_KEY="$(rand_b64 24)"
 JWT_SECRET="$(rand_b64 32)"
