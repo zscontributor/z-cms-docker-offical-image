@@ -203,6 +203,11 @@ services:
       APP_DATABASE_URL: postgresql://${APP_DB_USER:-zcms_app}:${APP_DB_PASSWORD:-zcms_app}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       S3_ENDPOINT: http://rustfs:9000
+      # The worker calls back into cms-api for mail delivery, the marketplace
+      # revocation sync, deferred plugin hooks and theme builds. The CMS_API_URL
+      # in .env is a localhost value (wrong inside this container), so point it at
+      # the service over the compose network here.
+      CMS_API_URL: http://cms-api:4100
     depends_on:
       postgres:
         condition: service_healthy

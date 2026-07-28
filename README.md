@@ -230,9 +230,10 @@ variable inline). The essentials:
 - **`FIRST_PARTY_PUBLIC_KEY`** — the key the official images are signed with. The
   default in `.env.example` matches the published images; leave it unless you build
   and sign your own.
-- **Marketplace** — blank by default (fully offline: built-in themes/plugins still
-  work). Set `MARKETPLACE_URL` **and** pin `MARKETPLACE_PUBLIC_KEY` to install from
-  a marketplace.
+- **Marketplace** — the official Z-CMS marketplace is enabled by default, so the
+  admin lists its themes and plugins out of the box. Blank both `MARKETPLACE_URL`
+  and `MARKETPLACE_PUBLIC_KEY` to run fully offline, or repoint them at a private
+  marketplace (the key, not the hostname, is the trust boundary).
 
 Full reference: [docs/configuration.md](docs/configuration.md).
 

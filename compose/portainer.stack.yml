@@ -200,6 +200,11 @@ services:
       TRUST_PROXY: "1"
       SWAGGER_ENABLED: "true"
       FIRST_PARTY_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKlZg1nED9EybjxuY9Oah8ppD/3n09jOngODUVzeXFJw=\n-----END PUBLIC KEY-----'
+      # Official Z-CMS marketplace, so the admin lists its themes/plugins. Blank
+      # both to run offline; repoint for a private marketplace (the key is the
+      # trust boundary).
+      MARKETPLACE_URL: https://marketplace.z-cms.org
+      MARKETPLACE_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAynHeppMexHtzTv/Tf2DVGEGWcDZ0YFZAEwy47BvwGmQ=\n-----END PUBLIC KEY-----'
     depends_on:
       postgres:
         condition: service_healthy
@@ -230,6 +235,9 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       CMS_INTERNAL_TOKEN: ${CMS_INTERNAL_TOKEN}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      # Reaches cms-api over the compose network for mail, marketplace sync,
+      # deferred plugin hooks and theme builds.
+      CMS_API_URL: http://cms-api:4100
     depends_on:
       postgres:
         condition: service_healthy
@@ -274,6 +282,9 @@ services:
       S3_PUBLIC_URL: https://${DOMAIN}/zcms-media
       CMS_INTERNAL_TOKEN: ${SITE_RUNTIME_INTERNAL_TOKEN}
       FIRST_PARTY_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAKlZg1nED9EybjxuY9Oah8ppD/3n09jOngODUVzeXFJw=\n-----END PUBLIC KEY-----'
+      # A marketplace theme renders in this process, so it is verified against the
+      # pinned marketplace key before it loads.
+      MARKETPLACE_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAynHeppMexHtzTv/Tf2DVGEGWcDZ0YFZAEwy47BvwGmQ=\n-----END PUBLIC KEY-----'
     depends_on:
       cms-api:
         condition: service_healthy

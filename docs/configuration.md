@@ -68,7 +68,7 @@ the provider's public/CDN URL.
 | Variable | What it is |
 | --- | --- |
 | `FIRST_PARTY_PUBLIC_KEY` | Verifies the built-in themes/plugins in the image. The `.env.example` default matches the **official images** — leave it unless you build & sign your own. |
-| `MARKETPLACE_URL` | Marketplace this instance installs from. Blank = offline (built-ins still work). |
+| `MARKETPLACE_URL` | Marketplace this instance installs from. Defaults to the official Z-CMS marketplace; blank = offline (built-ins still work). |
 | `MARKETPLACE_PUBLIC_KEY` | Pinned key the marketplace's packages/revocations are verified against. The key, not the URL, is the trust boundary. |
 | `OPERATOR_PUBLIC_KEY` | Verifies sideloaded (install-from-file) packages. Blank = sideload disabled. |
 | `OPERATOR_PRIVATE_KEY` | Only for the `.zip` convenience path (cms-api signs). Leave blank; sign offline instead. |
