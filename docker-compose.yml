@@ -232,6 +232,9 @@ services:
       ADMIN_BASE_PATH: ${ADMIN_BASE_PATH:-/admin}
       # The origin media is served from, for the admin's own img-src CSP.
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:?set S3_PUBLIC_URL in .env}
+      # The marketplace serves package screenshots from its own origin; without
+      # it in the admin's img-src CSP, those previews are blocked.
+      MARKETPLACE_URL: ${MARKETPLACE_URL:-}
     depends_on:
       cms-api:
         condition: service_healthy

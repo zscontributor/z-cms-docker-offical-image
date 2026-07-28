@@ -257,6 +257,8 @@ services:
       SITE_RUNTIME_URL: https://${DOMAIN}
       ADMIN_BASE_PATH: /admin
       S3_PUBLIC_URL: https://${DOMAIN}/zcms-media
+      # Allow marketplace screenshots through the admin's img-src CSP.
+      MARKETPLACE_URL: https://marketplace.z-cms.org
     depends_on:
       cms-api:
         condition: service_healthy
