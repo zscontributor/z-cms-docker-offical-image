@@ -55,7 +55,10 @@ configs:
       }
       {$$DOMAIN} {
         encode zstd gzip
-        @api path /api /api/*
+        # /api/v1 ONLY: cms-api mounts every route under that prefix, and
+        # site-runtime owns the rest of /api/* (/api/contact/submit,
+        # /api/forms/<id>/submit — where a public form posts).
+        @api path /api/v1 /api/v1/*
         handle @api { reverse_proxy cms-api:4100 }
         @admin path /admin /admin/*
         handle @admin { reverse_proxy admin-web:3001 }

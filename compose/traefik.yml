@@ -74,7 +74,12 @@ services:
       - traefik.enable=true
       # cms-api is on two networks; tell Traefik to reach it over the default one.
       - traefik.docker.network=z-cms_default
-      - traefik.http.routers.zcms-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+      # /api/v1 ONLY — cms-api mounts every route under that prefix (GLOBAL_PREFIX),
+      # while site-runtime owns other /api/* paths: /api/contact/submit and
+      # /api/forms/<id>/submit are where a public form posts. A bare /api prefix here
+      # hands those to cms-api, which 404s on them, and every contact/appointment
+      # form on the site silently stops working.
+      - traefik.http.routers.zcms-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/v1`)
       - traefik.http.routers.zcms-api.entrypoints=websecure
       - traefik.http.routers.zcms-api.tls.certresolver=le
       - traefik.http.routers.zcms-api.priority=30

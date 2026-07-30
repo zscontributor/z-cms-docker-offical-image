@@ -114,8 +114,10 @@ Sau đó chạy seed một lần (kèm đúng các cờ `-f`):
 vào web editor của Portainer (đã kèm Caddy tự động HTTPS, không cần mount file host).
 Phần đầu file liệt kê các biến môi trường cần đặt.
 
-Định tuyến theo path trên tên miền của bạn: `/api` → `cms-api`, `/admin` →
-`admin-web`, `/zcms-media` → media, còn lại → `site-runtime`.
+Định tuyến theo path trên tên miền của bạn: `/api/v1` → `cms-api`, `/admin` →
+`admin-web`, `/zcms-media` → media, còn lại → `site-runtime`. Chỉ `/api/v1`, không
+phải cả `/api`: `site-runtime` tự phục vụ các đường dẫn `/api` khác (ví dụ
+`/api/contact/submit`, `/api/forms/<id>/submit` — nơi biểu mẫu công khai gửi dữ liệu).
 
 ## Cấu hình
 

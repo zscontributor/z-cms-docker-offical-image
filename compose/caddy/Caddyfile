@@ -8,8 +8,10 @@
 {$DOMAIN} {
 	encode zstd gzip
 
-	# The core API. Routes are under /api/v1.
-	@api path /api /api/*
+	# The core API — /api/v1 ONLY. cms-api mounts everything under that prefix;
+	# site-runtime owns the other /api/* paths, including /api/contact/submit and
+	# /api/forms/<id>/submit, where a public form posts. Widen this and forms 404.
+	@api path /api/v1 /api/v1/*
 	handle @api {
 		reverse_proxy cms-api:4100
 	}

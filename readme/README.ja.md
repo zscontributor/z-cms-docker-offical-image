@@ -115,8 +115,10 @@ docker compose -f docker-compose.yml -f compose/apache.yml up -d
 Portainer の Web エディタにそのまま貼り付けます（自動 HTTPS の Caddy 同梱、ホスト
 ファイルのマウント不要）。ファイル冒頭に設定すべき環境変数の一覧があります。
 
-ドメイン上のパスによるルーティング: `/api` → `cms-api`、`/admin` → `admin-web`、
-`/zcms-media` → メディア、その他すべて → `site-runtime`。
+ドメイン上のパスによるルーティング: `/api/v1` → `cms-api`、`/admin` → `admin-web`、
+`/zcms-media` → メディア、その他すべて → `site-runtime`。`/api` 全体ではなく
+`/api/v1` のみです: 他の `/api/*`（`/api/contact/submit`、`/api/forms/<id>/submit`
+など公開フォームの送信先）は `site-runtime` が自ら処理します。
 
 ## 設定
 

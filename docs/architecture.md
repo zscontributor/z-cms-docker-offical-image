@@ -12,7 +12,7 @@ the boundaries below are what keep that code away from your credentials.
                     │  TLS + routing│
                     └──────┬───────┘
         /admin  ┌──────────┼───────────┬──────────────┐  everything else
-                │          │ /api      │ /zcms-media   │
+                │          │ /api/v1   │ /zcms-media   │
           ┌─────▼────┐ ┌───▼────┐  ┌───▼────┐    ┌─────▼──────┐
           │admin-web │ │cms-api │  │ rustfs │    │site-runtime│
           │  :3001   │ │ :4100  │  │ :9000  │    │   :3000    │

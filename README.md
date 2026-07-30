@@ -123,7 +123,7 @@ on your domain:
 
 | Path on your domain | Goes to |
 | --- | --- |
-| `/api/…` | `cms-api` (API, routes are under `/api/v1`) |
+| `/api/v1/…` | `cms-api` (its only prefix — other `/api/*` paths belong to `site-runtime`, e.g. public form submits) |
 | `/admin/…` | `admin-web` (admin UI) |
 | `/zcms-media/…` | `rustfs` (public media reads) |
 | everything else | `site-runtime` (the public site) |
